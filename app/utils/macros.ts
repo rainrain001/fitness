@@ -33,3 +33,20 @@ export function sumMacros(items: MacroSource[]): MacroTotals {
 export function round(value: number): number {
   return Math.round(value * 10) / 10
 }
+
+// How a plan's value measures up against an expected target.
+//  - 'none'  : no target set, nothing to compare
+//  - 'green' : plan is close enough to (or equal to) the target
+//  - 'yellow': target is greater than the plan (still under target)
+//  - 'red'   : plan is greater than the target (over target)
+export type MacroStatus = 'none' | 'green' | 'yellow' | 'red'
+
+// Consider a plan "close enough" when within 5% of the target.
+const CLOSE_ENOUGH = 0.05
+
+export function compareMacro(plan: number, target?: number | null): MacroStatus {
+  if (target == null || target <= 0) return 'none'
+  const tolerance = target * CLOSE_ENOUGH
+  if (Math.abs(plan - target) <= tolerance) return 'green'
+  return target > plan ? 'yellow' : 'red'
+}

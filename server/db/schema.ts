@@ -12,6 +12,23 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').notNull().defaultNow()
 })
 
+// A user's expected daily macronutrient targets — one row per user, compared
+// against a plan's totals. Each macro is optional (null = no target set).
+export const macroTargets = pgTable('macro_targets', {
+  id: serial('id').primaryKey(),
+  idUser: integer('id_user')
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  calories: real('calories'), // kcal
+  protein: real('protein'), // g
+  carbs: real('carbs'), // g
+  fat: real('fat'), // g
+  sugar: real('sugar'), // g
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow()
+})
+
 // A saved food and its macronutrients. Calories in kcal, everything else in grams.
 export const foods = pgTable('foods', {
   id: serial('id').primaryKey(),
@@ -58,9 +75,14 @@ export const planFoods = pgTable('plan_foods', {
   amount: real('amount')
 })
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   foods: many(foods),
-  plans: many(plans)
+  plans: many(plans),
+  macroTargets: one(macroTargets, { fields: [users.id], references: [macroTargets.idUser] })
+}))
+
+export const macroTargetsRelations = relations(macroTargets, ({ one }) => ({
+  user: one(users, { fields: [macroTargets.idUser], references: [users.id] })
 }))
 
 export const foodsRelations = relations(foods, ({ one, many }) => ({

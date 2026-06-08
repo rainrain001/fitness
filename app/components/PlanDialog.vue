@@ -107,33 +107,38 @@
             </div>
           </div>
         </div>
-
-        <MacroSummary
-          :totals="totals"
-          title="Plan totals"
-          :description="`${selectedIds.size} food${selectedIds.size === 1 ? '' : 's'} selected`"
-        />
       </div>
 
-      <DialogFooter>
-        <Button
-          variant="outline"
-          @click="open = false"
-        >
-          Cancel
-        </Button>
-        <Button
-          :disabled="saving"
-          @click="submit"
-        >
-          {{ saving ? 'Saving…' : 'Save plan' }}
-        </Button>
+      <DialogFooter class="flex flex-col sm:flex-col gap-2">
+        <MacroSummary
+          size="sm"
+          :totals="totals"
+          :targets="targets"
+          title="Plan totals"
+          :description="summaryDescription"
+        />
+        <div class="flex gap-2 justify-end pt-4">
+          <Button
+            variant="outline"
+            @click="open = false"
+          >
+            Cancel
+          </Button>
+          <Button
+            :disabled="saving"
+            class="bg-green-600 hover:bg-green-600/80"
+            @click="submit"
+          >
+            {{ saving ? 'Saving…' : 'Save plan' }}
+          </Button>
+        </div>
       </DialogFooter>
     </DialogContent>
   </Dialog>
 </template>
 
 <script setup lang="ts">
+import type { MacroTotals } from '~/types/food'
 import type { Plan, PlanPeriod } from '~/types/plan'
 import { cn } from '~/utils/shadcn'
 
@@ -145,6 +150,7 @@ const http = useHttpRequest()
 const { notify } = useNotifications()
 const { idUser } = useCurrentUser()
 const { fetchFoods, foods } = useFoods()
+const { targets: macroTargets, fetchTargets } = useMacroTargets()
 
 const periods: PlanPeriod[] = ['day', 'week']
 
@@ -163,9 +169,29 @@ const totals = computed(() =>
   )
 )
 
+// The user's expected macronutrients, surfaced so the plan can be compared
+// against them. Null entries (unset targets) are simply not compared.
+const targets = computed<Partial<MacroTotals> | null>(() => {
+  const t = macroTargets.value
+  if (!t) return null
+  const out: Partial<MacroTotals> = {}
+  if (t.calories != null) out.calories = t.calories
+  if (t.protein != null) out.protein = t.protein
+  if (t.carbs != null) out.carbs = t.carbs
+  if (t.fat != null) out.fat = t.fat
+  if (t.sugar != null) out.sugar = t.sugar
+  return Object.keys(out).length ? out : null
+})
+
+const summaryDescription = computed(() => {
+  const count = selectedIds.value.size
+  const base = `${count} food${count === 1 ? '' : 's'} selected`
+  return targets.value ? `${base} · compared to your targets` : base
+})
+
 watch(open, async (isOpen) => {
   if (!isOpen) return
-  await fetchFoods()
+  await Promise.all([fetchFoods(), fetchTargets()])
   title.value = props.plan?.title ?? ''
   period.value = props.plan?.period ?? 'day'
   date.value = props.plan?.date ?? today()

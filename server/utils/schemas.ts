@@ -11,6 +11,17 @@ export const userInput = z.object({
 
 export const userUpdate = userInput.partial()
 
+// A user's expected daily macronutrient targets. Each macro is optional and may
+// be cleared (null). `idUser` scopes the targets to one portfolio.
+export const macroTargetInput = z.object({
+  idUser: z.number().int().positive(),
+  calories: z.number().min(0).max(20000).nullable().optional(),
+  protein: z.number().min(0).max(2000).nullable().optional(),
+  carbs: z.number().min(0).max(2000).nullable().optional(),
+  fat: z.number().min(0).max(2000).nullable().optional(),
+  sugar: z.number().min(0).max(2000).nullable().optional()
+})
+
 export const perUnits = ['grams', 'ml', 'serving', 'lbs'] as const
 
 // A food and its macros. Calories in kcal, protein/carbs/fat/sugar in grams.

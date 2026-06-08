@@ -9,3 +9,17 @@ export interface UserProfile {
   bodyFat: number | null // %
   createdAt: string
 }
+
+// A user's expected daily macronutrient targets.
+// Mirrors the `macro_targets` table in server/db/schema.ts.
+export interface MacroTargets {
+  id: number
+  idUser: number
+  calories: number | null // kcal
+  protein: number | null // g
+  carbs: number | null // g
+  fat: number | null // g
+  sugar: number | null // g
+  createdAt: string
+  updatedAt: string
+}

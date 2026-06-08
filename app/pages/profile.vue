@@ -71,6 +71,37 @@
               </div>
             </div>
 
+            <div class="grid gap-3 border-t pt-4">
+              <div>
+                <h2 class="text-sm font-medium">Expected macronutrients</h2>
+                <p class="text-muted-foreground text-xs">
+                  Your daily targets. Plans you build are compared against these.
+                </p>
+              </div>
+              <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                <div
+                  v-for="field in targetFields"
+                  :key="field.key"
+                  class="grid gap-1.5"
+                >
+                  <Label
+                    :for="`target-${field.key}`"
+                    class="text-xs"
+                  >
+                    {{ field.label }}
+                  </Label>
+                  <Input
+                    :id="`target-${field.key}`"
+                    v-model="targets[field.key]"
+                    type="number"
+                    min="0"
+                    step="any"
+                    :placeholder="field.unit"
+                  />
+                </div>
+              </div>
+            </div>
+
             <Button
               type="submit"
               :disabled="saving"
@@ -86,17 +117,30 @@
 </template>
 
 <script setup lang="ts">
-import type { UserProfile } from '~/types/user'
+import type { MacroTargets, UserProfile } from '~/types/user'
 import { z } from 'zod'
 
 const http = useHttpRequest()
 const router = useRouter()
 const { notify } = useNotifications()
 const { idUser, profile, setUser } = useCurrentUser()
+const { fetchTargets, saveTargets } = useMacroTargets()
 
 const saving = ref(false)
 const isExisting = computed(() => idUser.value !== null)
 const form = reactive({ name: '', age: '', height: '', weight: '', bodyFat: '' })
+
+// Expected daily macronutrients — kept separate from the profile form since they
+// live in their own table, saved together for a single "Save" experience.
+const targets = reactive({ calories: '', protein: '', carbs: '', fat: '', sugar: '' })
+
+const targetFields = [
+  { key: 'calories', label: 'Calories', unit: 'kcal' },
+  { key: 'protein', label: 'Protein', unit: 'g' },
+  { key: 'carbs', label: 'Carbs', unit: 'g' },
+  { key: 'fat', label: 'Fat', unit: 'g' },
+  { key: 'sugar', label: 'Sugar', unit: 'g' }
+] as const
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -104,6 +148,14 @@ const schema = z.object({
   height: z.number().min(0).max(300).nullable(),
   weight: z.number().min(0).max(700).nullable(),
   bodyFat: z.number().min(0).max(100).nullable()
+})
+
+const targetSchema = z.object({
+  calories: z.number().min(0).max(20000).nullable(),
+  protein: z.number().min(0).max(2000).nullable(),
+  carbs: z.number().min(0).max(2000).nullable(),
+  fat: z.number().min(0).max(2000).nullable(),
+  sugar: z.number().min(0).max(2000).nullable()
 })
 
 function fill(user: UserProfile) {
@@ -114,6 +166,12 @@ function fill(user: UserProfile) {
   form.bodyFat = user.bodyFat?.toString() ?? ''
 }
 
+function fillTargets(saved: MacroTargets | null) {
+  for (const field of targetFields) {
+    targets[field.key] = saved?.[field.key]?.toString() ?? ''
+  }
+}
+
 function toNumber(value: unknown): number | null {
   const str = String(value ?? '').trim()
   return str === '' ? null : Number(str)
@@ -122,15 +180,11 @@ function toNumber(value: unknown): number | null {
 onMounted(async () => {
   if (!idUser.value) return
 
-  if (profile.value) {
-    fill(profile.value)
-    return
-  }
-
   try {
-    const user = await http.request<UserProfile>(`/users/${idUser.value}`)
+    const user = profile.value ?? (await http.request<UserProfile>(`/users/${idUser.value}`))
     setUser(user)
     fill(user)
+    fillTargets(await fetchTargets())
   } catch (error) {
     notify({ type: 'error', title: 'Could not load profile', description: getErrorMessage(error) })
   }
@@ -145,8 +199,17 @@ async function submit() {
     bodyFat: toNumber(form.bodyFat)
   })
 
-  if (!result.success) {
-    notify({ type: 'error', title: 'Check the form', description: result.error.issues[0]?.message ?? 'Invalid input.' })
+  const targetResult = targetSchema.safeParse({
+    calories: toNumber(targets.calories),
+    protein: toNumber(targets.protein),
+    carbs: toNumber(targets.carbs),
+    fat: toNumber(targets.fat),
+    sugar: toNumber(targets.sugar)
+  })
+
+  if (!result.success || !targetResult.success) {
+    const issue = result.error?.issues[0] ?? targetResult.error?.issues[0]
+    notify({ type: 'error', title: 'Check the form', description: issue?.message ?? 'Invalid input.' })
     return
   }
 
@@ -155,10 +218,12 @@ async function submit() {
     if (idUser.value) {
       const user = await http.addOrUpdate<UserProfile>(`/users/${idUser.value}`, 'PATCH', { body: result.data })
       setUser(user)
+      await saveTargets(targetResult.data)
       notify({ type: 'success', title: 'Profile updated' })
     } else {
       const user = await http.addOrUpdate<UserProfile>('/users', 'POST', { body: result.data })
       setUser(user)
+      await saveTargets(targetResult.data, user.id)
       notify({ type: 'success', title: 'Welcome!', description: 'Your portfolio is ready.' })
       router.push('/')
     }
