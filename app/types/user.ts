@@ -3,6 +3,8 @@
 export interface UserProfile {
   id: number
   name: string
+  email: string | null
+  emailVerified: boolean
   age: number | null
   height: number | null // cm
   weight: number | null // kg

@@ -23,12 +23,30 @@
         </nav>
 
         <ClientOnly>
-          <NuxtLink
-            to="/profile"
-            class="text-muted-foreground hover:text-foreground text-sm"
-          >
-            {{ profile?.name ?? 'Set up profile' }}
-          </NuxtLink>
+          <div class="flex items-center gap-3">
+            <NuxtLink
+              v-if="idUser"
+              to="/profile"
+              class="text-muted-foreground hover:text-foreground text-sm"
+            >
+              {{ profile?.name ?? 'Set up profile' }}
+            </NuxtLink>
+            <button
+              v-if="idUser"
+              type="button"
+              class="text-muted-foreground hover:text-foreground text-sm"
+              @click="logout"
+            >
+              Sign out
+            </button>
+            <NuxtLink
+              v-else
+              to="/login"
+              class="text-muted-foreground hover:text-foreground text-sm"
+            >
+              Sign in
+            </NuxtLink>
+          </div>
         </ClientOnly>
       </div>
     </header>
@@ -42,7 +60,13 @@
 <script setup lang="ts">
 import { UtensilsCrossedIcon } from '@lucide/vue'
 
-const { profile } = useCurrentUser()
+const router = useRouter()
+const { idUser, profile, clear } = useCurrentUser()
+
+function logout() {
+  clear()
+  router.push('/login')
+}
 
 const nav = [
   { to: '/', label: 'Dashboard' },

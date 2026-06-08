@@ -2,7 +2,7 @@
   <Card :class="cn(size === 'sm' && 'py-4')">
     <CardHeader :class="cn(size === 'sm' && 'gap-1 px-4')">
       <CardTitle :class="cn('flex items-center gap-2', size === 'sm' && 'text-sm')">
-        <FlameIcon :class="cn(size === 'sm' ? 'size-4' : 'size-5')" />
+        <FlameIcon :class="cn(size === 'sm' ? 'size-4' : 'size-5', 'text-red-600')" />
         {{ title }}
       </CardTitle>
       <CardDescription
@@ -17,7 +17,9 @@
         <div
           v-for="metric in metrics"
           :key="metric.label"
-          :class="cn('bg-muted/50 rounded-lg p-3 text-center', size === 'sm' && 'rounded-md p-2', statusBg[metric.status])"
+          :class="
+            cn('bg-muted/50 rounded-lg p-3 text-center', size === 'sm' && 'rounded-md p-2', statusBg[metric.status])
+          "
         >
           <dt class="text-muted-foreground text-xs font-medium">{{ metric.label }}</dt>
           <dd :class="cn('mt-1 text-xl font-semibold', size === 'sm' && 'text-lg', statusText[metric.status])">
@@ -57,15 +59,16 @@ const props = withDefaults(
   }
 )
 
-// Subtle tint + text colour per comparison status. 'none' stays neutral.
+// Subtle tint + text colour per comparison status. 'none' (no target set, or a
+// zero/default value) renders slate.
 const statusBg: Record<MacroStatus, string> = {
-  none: '',
+  none: 'bg-slate-500/10',
   green: 'bg-green-500/10',
   yellow: 'bg-yellow-500/10',
   red: 'bg-red-500/10'
 }
 const statusText: Record<MacroStatus, string> = {
-  none: '',
+  none: 'text-slate-500 dark:text-slate-400',
   green: 'text-green-600 dark:text-green-400',
   yellow: 'text-yellow-600 dark:text-yellow-500',
   red: 'text-red-600 dark:text-red-400'
@@ -84,7 +87,9 @@ const metrics = computed(() => {
   ).map((m) => {
     const value = props.totals[m.key]
     const target = t?.[m.key] ?? null
-    return { ...m, value, target, status: compareMacro(value, target) }
+    // A default (no target) or zero value is slate; otherwise compare to the target.
+    const status: MacroStatus = round(value) === 0 ? 'none' : compareMacro(value, target)
+    return { ...m, value, target, status }
   })
 })
 </script>

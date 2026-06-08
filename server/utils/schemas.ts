@@ -11,6 +11,27 @@ export const userInput = z.object({
 
 export const userUpdate = userInput.partial()
 
+// Auth. Sign-up creates an unverified account; the OTP sent to the email gates
+// it. `code` is the 6-digit OTP entered on the verification step.
+export const signupInput = z.object({
+  email: z.string().email('Enter a valid email').toLowerCase().trim(),
+  password: z.string().min(8, 'Password must be at least 8 characters')
+})
+
+export const loginInput = z.object({
+  email: z.string().email('Enter a valid email').toLowerCase().trim(),
+  password: z.string().min(1, 'Password is required')
+})
+
+export const verifyInput = z.object({
+  email: z.string().email('Enter a valid email').toLowerCase().trim(),
+  code: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code')
+})
+
+export const resendInput = z.object({
+  email: z.string().email('Enter a valid email').toLowerCase().trim()
+})
+
 // A user's expected daily macronutrient targets. Each macro is optional and may
 // be cleared (null). `idUser` scopes the targets to one portfolio.
 export const macroTargetInput = z.object({

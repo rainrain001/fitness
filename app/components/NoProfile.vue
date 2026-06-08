@@ -3,13 +3,19 @@
     <CardHeader>
       <CardTitle class="flex items-center justify-center gap-2">
         <UserIcon class="size-5" />
-        Set up your profile
+        Get started
       </CardTitle>
-      <CardDescription> Create a profile to start tracking your food and macronutrients. </CardDescription>
+      <CardDescription> Sign in or create an account to start tracking your food and macronutrients. </CardDescription>
     </CardHeader>
-    <CardContent>
+    <CardContent class="flex justify-center gap-3">
       <Button as-child>
-        <NuxtLink to="/profile">Create profile</NuxtLink>
+        <NuxtLink to="/signup">Create account</NuxtLink>
+      </Button>
+      <Button
+        as-child
+        variant="outline"
+      >
+        <NuxtLink to="/login">Sign in</NuxtLink>
       </Button>
     </CardContent>
   </Card>

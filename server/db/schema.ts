@@ -2,13 +2,32 @@ import { relations } from 'drizzle-orm'
 import { boolean, date, integer, pgTable, real, serial, text, timestamp } from 'drizzle-orm/pg-core'
 
 // A user owns their whole portfolio: profile, food library and daily/weekly plans.
+// Authentication lives here too: email + hashed password, gated by OTP email
+// verification (see emailVerifications). email is nullable so pre-auth profiles
+// created before sign-up existed still validate.
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
+  email: text('email').unique(),
+  passwordHash: text('password_hash'),
+  emailVerified: boolean('email_verified').notNull().default(false),
   age: integer('age'),
   height: real('height'), // cm
   weight: real('weight'), // kg
   bodyFat: real('body_fat'), // %
+  createdAt: timestamp('created_at').notNull().defaultNow()
+})
+
+// A pending email-verification challenge — one active OTP per user, replaced on
+// resend and deleted once the email is verified.
+export const emailVerifications = pgTable('email_verifications', {
+  id: serial('id').primaryKey(),
+  idUser: integer('id_user')
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  code: text('code').notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow()
 })
 
@@ -78,7 +97,12 @@ export const planFoods = pgTable('plan_foods', {
 export const usersRelations = relations(users, ({ one, many }) => ({
   foods: many(foods),
   plans: many(plans),
-  macroTargets: one(macroTargets, { fields: [users.id], references: [macroTargets.idUser] })
+  macroTargets: one(macroTargets, { fields: [users.id], references: [macroTargets.idUser] }),
+  emailVerification: one(emailVerifications, { fields: [users.id], references: [emailVerifications.idUser] })
+}))
+
+export const emailVerificationsRelations = relations(emailVerifications, ({ one }) => ({
+  user: one(users, { fields: [emailVerifications.idUser], references: [users.id] })
 }))
 
 export const macroTargetsRelations = relations(macroTargets, ({ one }) => ({
