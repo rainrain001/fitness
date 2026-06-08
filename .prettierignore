@@ -1,0 +1,7 @@
+# Ignore artifacts:
+build
+coverage
+
+# Add project-specific ignore patterns below
+node_modules
+app/components/ui

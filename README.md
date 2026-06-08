@@ -23,9 +23,7 @@ Small steps, clear numbers, less friction — so you can focus on your goals ins
 
 ---
 
-*Built with care for people who want nutrition tracking that feels easy, not overwhelming.*
-
-
+_Built with care for people who want nutrition tracking that feels easy, not overwhelming._
 
 ## Setup
 
