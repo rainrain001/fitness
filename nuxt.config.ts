@@ -2,7 +2,8 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['@nuxtjs/tailwindcss', 'shadcn-nuxt', '@nuxt/eslint'],
+  modules: ['@nuxthub/core', '@nuxtjs/tailwindcss', 'shadcn-nuxt', '@nuxt/eslint'],
+  css: ['~/assets/css/tailwind.css'],
   runtimeConfig: {
     public: {
       api: ''
@@ -11,5 +12,8 @@ export default defineNuxtConfig({
   shadcn: {
     prefix: '',
     componentDir: '~/components/ui'
+  },
+  hub: {
+    db: 'postgresql'
   }
 })
