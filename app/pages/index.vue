@@ -91,14 +91,25 @@ const today = new Date().toISOString().slice(0, 10)
 
 const completedCount = computed(() => (plans.value ?? []).filter((plan) => plan.completed).length)
 
-const todayPlans = computed(() => (plans.value ?? []).filter((plan) => plan.date === today))
+// A plan covers today when today falls inside its window: a day plan is just its
+// own date, a week plan spans the 7 days starting on its date. ISO date strings
+// compare correctly lexically.
+function coversToday(plan: Plan) {
+  if (plan.date > today) return false
+  if (plan.period === 'day') return plan.date === today
+  const end = new Date(`${plan.date}T00:00:00`)
+  end.setDate(end.getDate() + 6)
+  return today <= end.toISOString().slice(0, 10)
+}
+
+const todayPlans = computed(() => (plans.value ?? []).filter(coversToday))
 
 const todayTotals = computed(() =>
   sumMacros(todayPlans.value.flatMap((plan) => plan.foods.map((food) => scaleFood(food, food.amount))))
 )
 
 const todayDescription = computed(() =>
-  todayPlans.value.length ? `Across ${todayPlans.value.length} plan(s) dated today` : 'No plans dated today yet'
+  todayPlans.value.length ? `Across ${todayPlans.value.length} plan(s) covering today` : 'No plans covering today yet'
 )
 
 const profileMetrics = computed(() => [

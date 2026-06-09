@@ -17,6 +17,7 @@
     "@nuxt/eslint": "^1.15.2",
     "@nuxthub/core": "^0.10.7",
     "@vueuse/core": "^14.3.0",
+    "aws4fetch": "^1.0.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-kit": "^0.31.10",

@@ -5,5 +5,5 @@ export default defineEventHandler(async (event) => {
   const [food] = await db.insert(schema.foods).values(input).returning()
 
   setResponseStatus(event, 201)
-  return food
+  return await withPictureUrl(food)
 })

@@ -20,8 +20,8 @@
 
       <div class="bg-muted flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-md">
         <img
-          v-if="food.picture"
-          :src="food.picture"
+          v-if="food.pictureUrl"
+          :src="food.pictureUrl"
           :alt="food.name"
           class="size-full object-cover"
         />

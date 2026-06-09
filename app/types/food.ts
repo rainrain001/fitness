@@ -7,7 +7,8 @@ export interface Food {
   id: number
   idUser: number
   name: string
-  picture: string | null
+  picture: string | null // stored filename in the bucket
+  pictureUrl: string | null // public URL for display, resolved by the server
   calories: number // kcal
   protein: number // g
   carbs: number // g

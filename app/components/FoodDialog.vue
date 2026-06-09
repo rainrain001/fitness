@@ -24,8 +24,8 @@
           <div class="flex items-center gap-3">
             <div class="bg-muted flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md border">
               <img
-                v-if="form.picture"
-                :src="form.picture"
+                v-if="previewUrl"
+                :src="previewUrl"
                 alt=""
                 class="size-full object-cover"
               />
@@ -51,16 +51,28 @@
                 Upload image
               </Button>
               <Button
-                v-if="form.picture"
+                v-if="previewUrl"
                 type="button"
                 variant="ghost"
                 size="sm"
-                @click="form.picture = null"
+                @click="removePicture"
               >
                 Remove
               </Button>
             </div>
           </div>
+          <p
+            v-if="pictureError"
+            class="text-destructive text-xs"
+          >
+            {{ pictureError }}
+          </p>
+          <p
+            v-else
+            class="text-muted-foreground text-xs"
+          >
+            Note: images must be 1MB or smaller (JPG, PNG, WebP, GIF).
+          </p>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -156,8 +168,16 @@ type MacroKey = (typeof macroFields)[number]['key']
 
 const perUnits: PerUnit[] = ['grams', 'ml', 'serving', 'lbs']
 
+// Mirrors MAX_FOOD_IMAGE_BYTES on the server (server/utils/uploads.ts).
+const MAX_PICTURE_BYTES = 1024 * 1024 // 1 MB
+
 const fileInput = ref<HTMLInputElement | null>(null)
 const saving = ref(false)
+// The newly picked file, uploaded on submit. previewUrl drives the thumbnail and
+// may be an existing food's URL or an object URL for a freshly picked file.
+const pendingFile = ref<File | null>(null)
+const previewUrl = ref<string | null>(null)
+const pictureError = ref<string | null>(null)
 const form = reactive<
   { name: string; picture: string | null; perAmount: string; perUnit: PerUnit } & Record<MacroKey, string>
 >({
@@ -185,6 +205,7 @@ watch(open, (isOpen) => {
   if (!isOpen) return
   form.name = props.food?.name ?? ''
   form.picture = props.food?.picture ?? null
+  resetPicture(props.food?.pictureUrl ?? null)
   form.perAmount = props.food?.perAmount?.toString() ?? ''
   form.perUnit = props.food?.perUnit ?? 'grams'
   for (const { key } of macroFields) {
@@ -192,15 +213,36 @@ watch(open, (isOpen) => {
   }
 })
 
+// Point the preview at `url`, dropping any pending file and freeing a prior
+// object URL. Used on open/reset and after removing the picture.
+function resetPicture(url: string | null) {
+  if (previewUrl.value?.startsWith('blob:')) URL.revokeObjectURL(previewUrl.value)
+  pendingFile.value = null
+  previewUrl.value = url
+  pictureError.value = null
+}
+
 function onPicture(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = '' // allow re-picking the same file after an error
   if (!file) return
 
-  const reader = new FileReader()
-  reader.onload = () => {
-    form.picture = reader.result as string
+  if (file.size > MAX_PICTURE_BYTES) {
+    pictureError.value = 'Image is too large — pick one 1MB or smaller.'
+    notify({ type: 'error', title: 'Image too large', description: 'Please choose an image 1MB or smaller.' })
+    return
   }
-  reader.readAsDataURL(file)
+
+  if (previewUrl.value?.startsWith('blob:')) URL.revokeObjectURL(previewUrl.value)
+  pendingFile.value = file
+  previewUrl.value = URL.createObjectURL(file)
+  pictureError.value = null
+}
+
+function removePicture() {
+  form.picture = null
+  resetPicture(null)
 }
 
 async function submit() {
@@ -228,7 +270,16 @@ async function submit() {
 
   saving.value = true
   try {
-    const body = { ...result.data, picture: form.picture, perAmount, perUnit }
+    // Upload the freshly picked image first; persist only its filename.
+    let picture = form.picture
+    if (pendingFile.value) {
+      const fd = new FormData()
+      fd.append('file', pendingFile.value)
+      const uploaded = await http.addOrUpdate<{ filename: string }>('/foods/upload', 'POST', { body: fd })
+      picture = uploaded.filename
+    }
+
+    const body = { ...result.data, picture, perAmount, perUnit }
     if (props.food) {
       await http.addOrUpdate<Food>(`/foods/${props.food.id}`, 'PATCH', { body })
     } else {

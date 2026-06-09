@@ -55,7 +55,7 @@ export const foods = pgTable('foods', {
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
-  picture: text('picture'), // data URL or remote URL
+  picture: text('picture'), // stored filename in the storage bucket (not a URL or data URL)
   calories: real('calories').notNull().default(0), // kcal
   protein: real('protein').notNull().default(0), // g
   carbs: real('carbs').notNull().default(0), // g
